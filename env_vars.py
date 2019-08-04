@@ -1,0 +1,5 @@
+
+OPEN_POSE_LOC = "/usr/local/python"
+OPEN_POSE_LOC_WIN32 = "INSERT OPEN POSE PATH HERE" # TODO
+OPEN_POSE_LOC_WIN64 = "INSERT OPEN POSE PATH HERE"  # TODO
+MODEL_LOC = "/home/mhashim6/dev/openpose/models/"
