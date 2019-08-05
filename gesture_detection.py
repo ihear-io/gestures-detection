@@ -54,14 +54,14 @@ def hand_keypoints(
     """
     Uses body pose estimation to estimate lwrist & rwrist positions,
     from which we use `openpose` to obtain hand keypoints vectors. 
-    \n
-    Returns a pair of (left_hand_keypoints: ndarray, right_hand_keypoints: ndarray).\n
-    \n
-    params:\n
-    `img`: the image.\n
-    `debug`: whther or not to display results via `opencv` methods.\n
-    `margin`: margin of each hand rectangle.\n
-    `l`: squared rectangle length.\n
+
+    :returns a pair of (left_hand_keypoints: ndarray, right_hand_keypoints: ndarray).
+
+    :param images: a list of images to process.
+    :param debug: whether or not to display results via `opencv` methods.
+    :param err_thresh: indicates how much score is considered false positive.
+    :param margin: margin of each hand rectangle.
+    :param l: squared rectangle length.
     """
 
     hands = _hands_rectangles(images, debug, margin, l)
