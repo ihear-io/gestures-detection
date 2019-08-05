@@ -1,12 +1,12 @@
-import os
-from sys import platform
+from sys import platform, path
+from env_vars import OPEN_POSE_LOC
 
 
 def import_open_pose():
     """
-    Assuming openpose is already in your PATH/PYTHONPATH, or local env.
+    Assuming openpose path is already set in [env_vars.py].
     """
-
+    path.insert(1, OPEN_POSE_LOC)
     try:
         # Windows Import
         if platform == "win32":
