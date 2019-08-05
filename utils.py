@@ -17,6 +17,7 @@ def import_open_pose():
         return pyopenpose
     except ImportError as e:
         print(
-            "Error: OpenPose library could not be found. Did you enable `BUILD_PYTHON` in CMake and have this Python script in the right folder?"
+            "Error: OpenPose library could not be found. Did you enable `BUILD_PYTHON` in CMake and have this Python "
+            "script in the right folder? "
         )
         raise e

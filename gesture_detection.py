@@ -1,19 +1,13 @@
 import sys
 import cv2
 import argparse
-import time
 import numpy as np
 from utils import import_open_pose
 import env_vars
 
 op = import_open_pose()
 
-params = {
-    "model_folder": env_vars.MODEL_LOC,
-    "model_pose": "COCO",
-    "number_people_max": 1,
-    "net_resolution": "-1x64",
-}
+params = {"model_folder": env_vars.MODEL_LOC, "model_pose": "COCO", "number_people_max": 1, "net_resolution": "-1x64"}
 
 
 def hand_keypoints(img, debug=False, err_thresh=0.1, margin=250.0, l=450.0):
@@ -29,13 +23,13 @@ def hand_keypoints(img, debug=False, err_thresh=0.1, margin=250.0, l=450.0):
     `margin`: margin of each hand rectangle.\n
     `l`: squared rectangle length.\n
     """
-    opWrapper = op.WrapperPython()
-    opWrapper.configure(params)
-    opWrapper.start()
+    op_wrapper = op.WrapperPython()
+    op_wrapper.configure(params)
+    op_wrapper.start()
 
     datum = op.Datum()
     datum.cvInputData = img
-    opWrapper.emplaceAndPop([datum])
+    op_wrapper.emplaceAndPop([datum])
 
     if debug:
         cv2.imshow("body pose", datum.cvOutputData)
@@ -43,11 +37,10 @@ def hand_keypoints(img, debug=False, err_thresh=0.1, margin=250.0, l=450.0):
     x_left, y_left, _ = datum.poseKeypoints[0][7]  # left wrist
     x_right, y_right, _ = datum.poseKeypoints[0][4]  # righr wrist
 
-    handRectangles = [
+    hand_rectangles = [
         [
             op.Rectangle(x_left - margin, y_left - margin, l, l),  # left hand
-            op.Rectangle(x_right - margin, y_right - \
-                         margin, l, l),  # right hand
+            op.Rectangle(x_right - margin, y_right - margin, l, l),  # right hand
         ]
     ]
 
@@ -59,12 +52,12 @@ def hand_keypoints(img, debug=False, err_thresh=0.1, margin=250.0, l=450.0):
         "hand_detector": 2,
         "body": 0,
     }
-    opWrapper.configure(hand_params)
-    opWrapper.start()
+    op_wrapper.configure(hand_params)
+    op_wrapper.start()
     datum = op.Datum()
     datum.cvInputData = img
-    datum.handRectangles = handRectangles
-    opWrapper.emplaceAndPop([datum])
+    datum.handRectangles = hand_rectangles
+    op_wrapper.emplaceAndPop([datum])
 
     ls = datum.handKeypoints[0][0]  # left
     rs = datum.handKeypoints[1][0]  # right
@@ -87,31 +80,11 @@ def hand_keypoints(img, debug=False, err_thresh=0.1, margin=250.0, l=450.0):
         cv2.imshow("hand key points", datum.cvOutputData)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-    return (ls, rs)
+    return ls, rs
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--image_path",
-        help="Process an image. Read all standard formats (jpg, png, bmp, etc.).",
-    )
+    parser.add_argument("--image_path", help="Process an image. Read all standard formats (jpg, png, bmp, etc.).")
     args = parser.parse_known_args()
-
-    # Add other flags in the path
-    for i in range(0, len(args[1])):
-        curr_item = args[1][i]
-        if i != len(args[1]) - 1:
-            next_item = args[1][i + 1]
-        else:
-            next_item = "1"
-        if "--" in curr_item and "--" in next_item:
-            key = curr_item.replace("-", "")
-            if key not in params:
-                params[key] = "1"
-        elif "--" in curr_item and "--" not in next_item:
-            key = curr_item.replace("-", "")
-            if key not in params:
-                params[key] = next_item
-
     hand_keypoints(cv2.imread(args[0].image_path), True)
