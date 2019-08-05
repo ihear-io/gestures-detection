@@ -1,4 +1,4 @@
-import sys
+from typing import *
 import cv2
 import argparse
 import numpy as np
