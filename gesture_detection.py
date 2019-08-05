@@ -69,9 +69,11 @@ def hand_keypoints(img, debug=False, err_thresh=0.1, margin=250.0, l=450.0):
 
     # sanitization
     if l_avg < err_thresh:
-        ls = np.array(list(map(lambda ns: np.array([0.0, 0.0, ns[2]]), ls)))
+        ls *= (0.0, 0.0, 1.0)
+        # ls = np.array(list(map(lambda ns: np.array([0.0, 0.0, ns[2]]), ls)))
     if r_avg < err_thresh:
-        rs = np.array(list(map(lambda ns: np.array([0.0, 0.0, ns[2]]), rs)))
+        rs *= (0.0, 0.0, 1.0)
+        # rs = np.array(list(map(lambda ns: np.array([0.0, 0.0, ns[2]]), rs)))
 
     print("Left hand keypoints:\n", ls)
     print("Right hand keypoints:\n", rs)
