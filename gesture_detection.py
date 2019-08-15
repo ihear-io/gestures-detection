@@ -72,6 +72,7 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
     _op_wrapper.configure(hand_params)
     _op_wrapper.start()
     keypoints: List[Tuple[np.ndarray, np.ndarray]] = []
+
     for i, img in enumerate(images):
         datum = _op.Datum()
         datum.cvInputData = img
@@ -81,25 +82,24 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
         ls = datum.handKeypoints[0][0]  # left
         rs = datum.handKeypoints[1][0]  # right
 
-        l_avg = sum(map(lambda y: y[2], ls)) / 21.0
-        print("left avg: ", l_avg)
-        r_avg = sum(map(lambda y: y[2], rs)) / 21.0
-        print("right avg: ", r_avg)
-
         # sanitization
+        l_avg = sum(map(lambda y: y[2], ls)) / 21.0
+        r_avg = sum(map(lambda y: y[2], rs)) / 21.0
         if l_avg < err_thresh:
             ls *= (0.0, 0.0, 1.0)
         if r_avg < err_thresh:
             rs *= (0.0, 0.0, 1.0)
-        keypoints.extend((ls, rs))
 
         if debug:
+            print("left avg: ", l_avg)
+            print("right avg: ", r_avg)
             print("Left hand keypoints:\n", ls)
             print("Right hand keypoints:\n", rs)
             cv2.imshow("hand key points", datum.cvOutputData)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
+        keypoints.extend((ls, rs))
     return keypoints
 
 
