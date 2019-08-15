@@ -16,11 +16,7 @@ params = {
 }
 
 
-def _hands_rectangles(
-        images: List,
-        debug=False,
-        margin: float = 250.0,
-        l: float = 450.0) -> List[List[_op.Rectangle]]:
+def _hands_rectangles(images: List, debug=False) -> List[List[_op.Rectangle]]:
     _op_wrapper.configure(params)
     _op_wrapper.start()
     hands = []
@@ -28,6 +24,12 @@ def _hands_rectangles(
         datum = _op.Datum()
         datum.cvInputData = img
         _op_wrapper.emplaceAndPop([datum])
+
+        height = np.size(img, 0)
+        width = np.size(img, 1)
+        axis: int = width > height  # axis of the longest dimension.
+        margin = np.size(img, axis) * 0.1
+        length = np.size(img, axis) * 0.6
 
         if debug:
             cv2.imshow("body pose", datum.cvOutputData)
@@ -37,34 +39,28 @@ def _hands_rectangles(
 
         hand_rectangles = [
             [
-                _op.Rectangle(x_left - margin, y_left - margin, l, l),  # left hand
-                _op.Rectangle(x_right - margin, y_right - margin, l, l),  # right hand
+                _op.Rectangle(x_left - margin, y_left - margin, length, length),  # left hand
+                _op.Rectangle(x_right - margin, y_right - margin, length, length),  # right hand
             ]
         ]
         hands.append(hand_rectangles)
+
     return hands
 
 
-def hand_keypoints(
-        images: List,
-        debug=False,
-        err_thresh: float = 0.1,
-        margin: float = 250.0,
-        l: float = 450.0) -> List[Tuple[np.ndarray, np.ndarray]]:
+def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[Tuple[np.ndarray, np.ndarray]]:
     """
     Uses body pose estimation to estimate lwrist & rwrist positions,
-    from which we use `openpose` to obtain hand keypoints vectors. 
+    from which we use `openpose` to obtain hand keypoints vectors.
 
     :returns a pair of (left_hand_keypoints: ndarray, right_hand_keypoints: ndarray).
 
     :param images: a list of images to process.
     :param debug: whether or not to display results via `opencv` methods.
     :param err_thresh: indicates how much score is considered false positive.
-    :param margin: margin of each hand rectangle.
-    :param l: squared rectangle length.
     """
 
-    hands = _hands_rectangles(images, debug, margin, l)
+    hands = _hands_rectangles(images, debug)
     hand_params = {
         "model_folder": env_vars.MODEL_LOC,
         "model_pose": "COCO",
