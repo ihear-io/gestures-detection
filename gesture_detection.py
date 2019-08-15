@@ -1,4 +1,6 @@
+import math
 from typing import *
+import os
 import cv2
 import argparse
 import numpy as np
@@ -16,35 +18,64 @@ params = {
 }
 
 
-def _hands_rectangles(images: List, debug=False) -> List[List[_op.Rectangle]]:
+def _distance(x1, y1, x2, y2):
+    dist = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    return dist
+
+
+def _hands_rectangles(images: List, err_thresh: float, debug=False) -> List[List[_op.Rectangle]]:
     _op_wrapper.configure(params)
     _op_wrapper.start()
+
+    if debug:
+        cv2.namedWindow("body pose", cv2.WINDOW_NORMAL)  # Create window with freedom of dimensions
+
     hands = []
     for img in images:
         datum = _op.Datum()
         datum.cvInputData = img
         _op_wrapper.emplaceAndPop([datum])
 
-        height = np.size(img, 0)
-        width = np.size(img, 1)
-        axis: int = width > height  # axis of the longest dimension.
-        margin = np.size(img, axis) * 0.1
-        length = np.size(img, axis) * 0.6
-
-        if debug:
-            cv2.imshow("body pose", datum.cvOutputData)
-
         x_left, y_left, _ = datum.poseKeypoints[0][7]  # left wrist
         x_right, y_right, _ = datum.poseKeypoints[0][4]  # right wrist
 
+        x_elbow_l, y_elbow_l, score_l = datum.poseKeypoints[0][6]
+        x_elbow_r, y_elbow_r, score_r = datum.poseKeypoints[0][3]
+
+        # width, height = np.size(img, 1), np.size(img, 0)
+        # diameter = _distance(0, height, width, 0)
+        # portrait = height > width
+        # l_left = _distance(x_left, y_left, x_elbow_l, y_elbow_l) \
+        #          * ((1 - (y_left / height)) if portrait else (1 - (x_left / width)))
+        # l_right = _distance(x_right, y_right, x_elbow_r, y_elbow_r) \
+        #           * ((1 - (y_right / height)) if portrait else (1 - (x_right / width)))
+
+        len_hand_left = _distance(x_left, y_left, x_elbow_l, y_elbow_l)
+        len_hand_right = _distance(x_right, y_right, x_elbow_r, y_elbow_r)
+
+        x_left_shifted = x_left - len_hand_left
+        y_left_shifted = y_left - len_hand_left
+        x_right_shifted = x_right - len_hand_right
+        y_right_shifted = y_right - len_hand_right
+
+        rect_len_left = 2 * max(x_left - x_left_shifted, y_left - y_left_shifted) \
+            if score_l > err_thresh else 0
+        rect_len_right = 2 * max(x_right - x_right_shifted, y_right - y_right_shifted) \
+            if score_r > err_thresh else 0
+
+        if debug:
+            print((rect_len_right, rect_len_left))
+            cv2.imshow("body pose", datum.cvOutputData)
+            cv2.waitKey(0)
+
         hand_rectangles = [
             [
-                _op.Rectangle(x_left - margin, y_left - margin, length, length),  # left hand
-                _op.Rectangle(x_right - margin, y_right - margin, length, length),  # right hand
+                _op.Rectangle(x_left_shifted, y_left_shifted, rect_len_left, rect_len_left),  # left hand
+                _op.Rectangle(x_right_shifted, y_right_shifted, rect_len_right, rect_len_right),  # right hand
             ]
         ]
         hands.append(hand_rectangles)
-
+    cv2.destroyAllWindows()
     return hands
 
 
@@ -60,7 +91,7 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
     :param err_thresh: indicates how much score is considered false positive.
     """
 
-    hands = _hands_rectangles(images, debug)
+    hands = _hands_rectangles(images, err_thresh, False)
     hand_params = {
         "model_folder": env_vars.MODEL_LOC,
         "model_pose": "COCO",
@@ -72,6 +103,9 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
     _op_wrapper.configure(hand_params)
     _op_wrapper.start()
     keypoints: List[Tuple[np.ndarray, np.ndarray]] = []
+
+    if debug:
+        cv2.namedWindow("hand key points", cv2.WINDOW_NORMAL)  # Create window with freedom of dimensions
 
     for i, img in enumerate(images):
         datum = _op.Datum()
@@ -97,9 +131,10 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
             print("Right hand keypoints:\n", rs)
             cv2.imshow("hand key points", datum.cvOutputData)
             cv2.waitKey(0)
-            cv2.destroyAllWindows()
 
         keypoints.extend((ls, rs))
+
+    cv2.destroyAllWindows()
     return keypoints
 
 
