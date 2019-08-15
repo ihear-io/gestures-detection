@@ -16,39 +16,35 @@ params = {
 }
 
 
-def _hands_rectangles(images: List, debug=False) -> List[List[_op.Rectangle]]:
+def _hands_rectangles(img: np.ndarray, debug=False) -> List[List[_op.Rectangle]]:
     _op_wrapper.configure(params)
     _op_wrapper.start()
-    hands = []
-    for img in images:
-        datum = _op.Datum()
-        datum.cvInputData = img
-        _op_wrapper.emplaceAndPop([datum])
+    datum = _op.Datum()
+    datum.cvInputData = img
+    _op_wrapper.emplaceAndPop([datum])
 
-        height = np.size(img, 0)
-        width = np.size(img, 1)
-        axis: int = width > height  # axis of the longest dimension.
-        margin = np.size(img, axis) * 0.1
-        length = np.size(img, axis) * 0.6
+    height = np.size(img, 0)
+    width = np.size(img, 1)
+    axis: int = width > height  # axis of the longest dimension.
+    margin = np.size(img, axis) * 0.1
+    length = np.size(img, axis) * 0.6
 
-        if debug:
-            cv2.imshow("body pose", datum.cvOutputData)
+    if debug:
+        cv2.imshow("body pose", datum.cvOutputData)
 
-        x_left, y_left, _ = datum.poseKeypoints[0][7]  # left wrist
-        x_right, y_right, _ = datum.poseKeypoints[0][4]  # right wrist
+    x_left, y_left, _ = datum.poseKeypoints[0][7]  # left wrist
+    x_right, y_right, _ = datum.poseKeypoints[0][4]  # right wrist
 
-        hand_rectangles = [
-            [
-                _op.Rectangle(x_left - margin, y_left - margin, length, length),  # left hand
-                _op.Rectangle(x_right - margin, y_right - margin, length, length),  # right hand
-            ]
+    hand_rectangles = [
+        [
+            _op.Rectangle(x_left - margin, y_left - margin, length, length),  # left hand
+            _op.Rectangle(x_right - margin, y_right - margin, length, length),  # right hand
         ]
-        hands.append(hand_rectangles)
+    ]
+    yield hand_rectangles
 
-    return hands
 
-
-def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[Tuple[np.ndarray, np.ndarray]]:
+def hand_keypoints(img: np.ndarray, err_thresh: float, debug: bool) -> List[Tuple[np.ndarray, np.ndarray]]:
     """
     Uses body pose estimation to estimate lwrist & rwrist positions,
     from which we use `openpose` to obtain hand keypoints vectors.
@@ -60,7 +56,7 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
     :param err_thresh: indicates how much score is considered false positive.
     """
 
-    hands = _hands_rectangles(images, debug)
+    # hands = _hands_rectangles(images, debug)
     hand_params = {
         "model_folder": env_vars.MODEL_LOC,
         "model_pose": "COCO",
@@ -71,12 +67,10 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
     }
     _op_wrapper.configure(hand_params)
     _op_wrapper.start()
-    keypoints: List[Tuple[np.ndarray, np.ndarray]] = []
-
-    for i, img in enumerate(images):
+    for rect in _hands_rectangles(img, debug):
         datum = _op.Datum()
         datum.cvInputData = img
-        datum.handRectangles = hands[i]
+        datum.handRectangles = rect
         _op_wrapper.emplaceAndPop([datum])
 
         ls = datum.handKeypoints[0][0]  # left
@@ -99,12 +93,22 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
-        keypoints.extend((ls, rs))
-    return keypoints
+        yield (ls, rs)
+
+
+def detect_gestures(images: List, debug=False, err_thresh: float = 0.1):
+    i = 0
+    for keypoints in hand_keypoints(images[i], err_thresh, debug):
+        if i >= len(images) - 1:
+            break
+        i += 1
+
+        if debug:
+            print("img #", i, "finished:\n", keypoints)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--image_path", help="Process an image. Read all standard formats (jpg, png, bmp, etc.).")
     args = parser.parse_known_args()
-    hand_keypoints([cv2.imread(args[0].image_path)], True)
+    detect_gestures([cv2.imread(args[0].image_path)], True)
