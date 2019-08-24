@@ -3,7 +3,7 @@ from numpy import load
 import numpy as np, random, os
 colors=os.listdir()
 
-#Split data into train and test
+#Split data into train (80%) and test(20%)
 #train
 i=0
 for c in colors:
