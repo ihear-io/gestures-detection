@@ -42,21 +42,13 @@ def _hands_rectangles(images: List, err_thresh: float, debug=False) -> List[List
         x_elbow_l, y_elbow_l, score_l = datum.poseKeypoints[0][6]
         x_elbow_r, y_elbow_r, score_r = datum.poseKeypoints[0][3]
 
-        # width, height = np.size(img, 1), np.size(img, 0)
-        # diameter = _distance(0, height, width, 0)
-        # portrait = height > width
-        # l_left = _distance(x_left, y_left, x_elbow_l, y_elbow_l) \
-        #          * ((1 - (y_left / height)) if portrait else (1 - (x_left / width)))
-        # l_right = _distance(x_right, y_right, x_elbow_r, y_elbow_r) \
-        #           * ((1 - (y_right / height)) if portrait else (1 - (x_right / width)))
-
         len_hand_left = _distance(x_left, y_left, x_elbow_l, y_elbow_l)
         len_hand_right = _distance(x_right, y_right, x_elbow_r, y_elbow_r)
 
-        x_left_shifted = x_left - len_hand_left
-        y_left_shifted = y_left - len_hand_left
-        x_right_shifted = x_right - len_hand_right
-        y_right_shifted = y_right - len_hand_right
+        x_left_shifted = max(0, x_left - len_hand_left)
+        y_left_shifted = max(0, y_left - len_hand_left)
+        x_right_shifted = max(0, x_right - len_hand_right)
+        y_right_shifted = max(0, y_right - len_hand_right)
 
         rect_len_left = 2 * max(x_left - x_left_shifted, y_left - y_left_shifted) \
             if score_l > err_thresh else 0
@@ -91,7 +83,7 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
     :param err_thresh: indicates how much score is considered false positive.
     """
 
-    hands = _hands_rectangles(images, err_thresh, False)
+    hands = _hands_rectangles(images, err_thresh, debug)
     hand_params = {
         "model_folder": env_vars.MODEL_LOC,
         "model_pose": "COCO",
@@ -132,7 +124,7 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
             cv2.imshow("hand key points", datum.cvOutputData)
             cv2.waitKey(0)
 
-        keypoints.extend((ls, rs))
+        keypoints.append((ls, rs))
 
     cv2.destroyAllWindows()
     return keypoints
