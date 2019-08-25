@@ -1,6 +1,6 @@
 import math
 from typing import *
-import os
+from os import path, listdir
 import cv2
 import argparse
 import numpy as np
@@ -79,7 +79,7 @@ def _hands_rectangles(images: List, err_thresh: float, debug=False) -> List[List
     return hands
 
 
-def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[Tuple[np.ndarray, np.ndarray]]:
+def _hand_keypoints(images: List, err_thresh: float, debug=False) -> List[Tuple[np.ndarray, np.ndarray]]:
     """
     Uses body pose estimation to estimate lwrist & rwrist positions,
     from which we use `openpose` to obtain hand keypoints vectors.
@@ -138,8 +138,19 @@ def hand_keypoints(images: List, debug=False, err_thresh: float = 0.1) -> List[T
     return keypoints
 
 
+def detect_gestures(img_dir: str, err_thresh: float = 0.1, persist=False, debug=False):
+    img_ext = (".jpg", ".jpeg", ".png")
+    image_names = [img for img in listdir(img_dir) if img.endswith(img_ext)]
+    images = [cv2.imread(path.join(args.image_dir, name)) for name in image_names]
+    keypoints = _hand_keypoints(images, err_thresh, debug)
+    if persist:
+        for i, pair in enumerate(keypoints):
+            np.savez(path.join(img_dir, image_names[i].split('.')[0]), *pair)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image_path", help="Process an image. Read all standard formats (jpg, png, bmp, etc.).")
-    args = parser.parse_known_args()
-    hand_keypoints([cv2.imread(args[0].image_path)], True)
+    parser.add_argument("--image_dir")
+    parser.add_argument("--out_dir", default='')  # TODO
+    args = parser.parse_args()
+    detect_gestures(args.image_dir, persist=True, debug=True)
