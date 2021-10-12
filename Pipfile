@@ -7,7 +7,7 @@ verify_ssl = true
 
 [packages]
 numpy = "==1.17.0"
-opencv-python = "==4.1.0.25"
+opencv-python = "==4.2.0.32"
 
 [requires]
 python_version = "3.7"
